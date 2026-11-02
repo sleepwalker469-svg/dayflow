@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0B0F17" />
+  <meta name="color-scheme" content="dark" />
+  <title>DAYFLOW — персональный планировщик</title>
+
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+  <div id="app">
+    <div class="bg-grid" aria-hidden="true"></div>
+
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">◻︎</div>
+        <div class="brand-text">
+          <div class="brand-name">DAYFLOW</div>
+          <div class="brand-sub">план дня • привычки • прогресс</div>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <button class="icon-btn" id="btnQuickAdd" title="Быстро добавить задачу">
+          <span class="icon" aria-hidden="true">＋</span>
+        </button>
+        <button class="icon-btn" id="btnExport" title="Экспортировать данные">
+          <span class="icon" aria-hidden="true">⤓</span>
+        </button>
+        <button class="icon-btn" id="btnImport" title="Импортировать данные">
+          <span class="icon" aria-hidden="true">⤒</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Content (SPA via hash) -->
+    <main class="content">
+      <!-- TODAY -->
+      <section class="page" data-page="today">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title" id="todayGreeting">Добро пожаловать</h1>
+            <div class="page-meta">
+              <span class="meta-item" id="todayDate"></span>
+              <span class="dot">•</span>
+              <span class="meta-item" id="todayDow"></span>
+            </div>
+          </div>
+
+          <div class="day-progress-card">
+            <div class="card-title-row">
+              <div class="card-title">Прогресс дня</div>
+              <div class="pill" id="todayProgressPill">—</div>
+            </div>
+            <div class="progress-ring">
+              <svg viewBox="0 0 120 120" class="ring" aria-hidden="true">
+                <circle class="ring-bg" cx="60" cy="60" r="48"></circle>
+                <circle class="ring-fg" cx="60" cy="60" r="48"></circle>
+              </svg>
+              <div class="ring-center">
+                <div class="ring-value" id="todayProgressValue">0%</div>
+                <div class="ring-label">готово</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title-row">
+              <h2 class="card-title">Сегодня</h2>
+              <div class="task-count" id="todayCounts">—</div>
+            </div>
+
+            <div class="filters">
+              <div class="select-wrap">
+                <label class="label">Категория</label>
+                <select id="filterCategory">
+                  <option value="all">Все</option>
+                </select>
+              </div>
+
+              <div class="select-wrap">
+                <label class="label">Приоритет</label>
+                <select id="filterPriority">
+                  <option value="all">Все</option>
+                  <option value="high">Высокий</option>
+                  <option value="medium">Средний</option>
+                  <option value="low">Низкий</option>
+                </select>
+              </div>
+
+              <div class="search-wrap">
+                <label class="label">Поиск</label>
+                <div class="search">
+                  <span class="search-ico" aria-hidden="true">⌕</span>
+                  <input id="taskSearch" placeholder="название, описание…" />
+                </div>
+              </div>
+            </div>
+
+            <div class="section-head">
+              <div class="section-title">Задачи</div>
+              <button class="ghost-btn" id="btnClearDayFilters" type="button">Сбросить</button>
+            </div>
+
+            <div class="list" id="todayTaskList" role="list"></div>
+
+            <div class="empty-state" id="todayEmpty" hidden>
+              <div class="empty-title">Сегодня пока пусто</div>
+              <div class="empty-sub">Добавьте задачу — и день станет управляемым.</div>
+            </div>
+          </div>
+
+          <div class="col-right">
+            <div class="card card-pad">
+              <div class="section-head">
+                <div class="section-title">Расписание</div>
+                <button class="ghost-btn" id="btnJumpToNow" type="button">Сейчас</button>
+              </div>
+
+              <div class="timeline" id="timelineToday"></div>
+
+              <div class="timeline-hint">
+                Нажмите задачу, чтобы открыть редактирование.
+              </div>
+            </div>
+
+            <div class="card card-pad">
+              <div class="section-head">
+                <div class="section-title">Быстрое добавление</div>
+                <div class="small-muted">1 минута</div>
+              </div>
+
+              <form id="quickAddForm" class="quick-add-form" autocomplete="off">
+                <input id="quickTitle" placeholder="Например: Сдать отчёт" required />
+                <div class="quick-row">
+                  <select id="quickCategory">
+                    <option value="general">Без категории</option>
+                  </select>
+
+                  <select id="quickPriority">
+                    <option value="high">Высокий</option>
+                    <option value="medium">Средний</option>
+                    <option value="low">Низкий</option>
+                  </select>
+                </div>
+
+                <div class="quick-row">
+                  <input type="time" id="quickStart" />
+                  <input type="time" id="quickEnd" />
+                </div>
+
+                <button class="primary-btn" type="submit">Добавить</button>
+                <div class="helper">
+                  Подсказка: если время не указать — задача добавится без привязки к таймслоту расписания.
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-wide">
+          <div class="section-head">
+            <div>
+              <div class="section-title">Главные приоритеты дня</div>
+              <div class="small-muted">Фокус на ключевом — минимум шума</div>
+            </div>
+            <button class="ghost-btn" id="btnAddPriorityTask" type="button">Добавить</button>
+          </div>
+
+          <div class="priority-grid" id="priorityGrid"></div>
+          <div class="helper-row small-muted">Совет: отметьте выполненные задачи — прогресс обновится мгновенно.</div>
+        </div>
+      </section>
+
+      <!-- CALENDAR -->
+      <section class="page" data-page="calendar" hidden>
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Календарь</h1>
+            <div class="page-meta">
+              <span class="meta-item" id="calWeekRange"></span>
+              <span class="dot">•</span>
+              <span class="meta-item" id="calSelectedDate"></span>
+            </div>
+          </div>
+
+          <div class="cal-actions">
+            <button class="ghost-btn" id="calTodayBtn" type="button">Сегодня</button>
+            <button class="ghost-btn" id="calPrevWeekBtn" type="button">◀</button>
+            <button class="ghost-btn" id="calNextWeekBtn" type="button">▶</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="week-grid" id="weekGrid" role="list"></div>
+
+          <div class="divider"></div>
+
+          <div class="section-head">
+            <div class="section-title">Расписание по часам</div>
+            <div class="small-muted" id="calSelectedDow"></div>
+          </div>
+
+          <div class="timeline" id="timelineCalendar"></div>
+          <div class="timeline-hint">Переход между неделями и выбор дня доступны сверху.</div>
+        </div>
+      </section>
+
+      <!-- HABITS -->
+      <section class="page" data-page="habits" hidden>
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Привычки</h1>
+            <div class="page-meta">
+              <span class="meta-item" id="habitsTodayMeta"></span>
+            </div>
+          </div>
+          <button class="primary-btn" id="btnAddHabit" type="button">+ Новая привычка</button>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title-row">
+              <div class="card-title">Сегодня</div>
+              <div class="task-count" id="habitsCountsToday">—</div>
+            </div>
+
+            <div class="habit-list" id="habitListToday" role="list"></div>
+
+            <div class="divider"></div>
+
+            <div class="section-head">
+              <div class="section-title">История</div>
+              <div class="small-muted">последние 14 дней</div>
+            </div>
+
+            <div class="habit-history" id="habitHistory"></div>
+          </div>
+
+          <div class="col-right">
+            <div class="card card-pad">
+              <div class="section-head">
+                <div class="section-title">Статистика</div>
+                <div class="small-muted">реальные данные</div>
+              </div>
+
+              <div class="stat-cards">
+                <div class="stat-card">
+                  <div class="stat-label">Всего привычек</div>
+                  <div class="stat-value" id="habitsTotal">0</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-label">Выполнений за 14 дней</div>
+                  <div class="stat-value" id="habitsTotalDone">0</div>
+                </div>
+              </div>
+
+              <div class="divider"></div>
+
+              <div class="chart-card">
+                <div class="chart-title">Серия дней (best streak)</div>
+                <div class="bars" id="habitStreakBars"></div>
+                <div class="timeline-hint">Показывает максимальную серию для каждой привычки.</div>
+              </div>
+            </div>
+
+            <div class="card card-pad">
+              <div class="section-head">
+                <div class="section-title">Управление</div>
+              </div>
+              <button class="danger-btn" id="btnManageHabitsReset" type="button">Удалить все привычки</button>
+              <div class="helper">
+                Будьте осторожны: действие требует подтверждения.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- NOTES -->
+      <section class="page" data-page="notes" hidden>
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Заметки</h1>
+            <div class="page-meta">
+              <span class="meta-item">Автосохранение включено</span>
+            </div>
+          </div>
+          <div class="cal-actions">
+            <button class="ghost-btn" id="btnNewNote" type="button">+ Новая заметка</button>
+          </div>
+        </div>
+
+        <div class="grid-notes">
+          <div class="card notes-sidebar">
+            <div class="section-head">
+              <div class="section-title">Список</div>
+              <div class="small-muted" id="notesCount">—</div>
+            </div>
+
+            <div class="search">
+              <span class="search-ico" aria-hidden="true">⌕</span>
+              <input id="notesSearch" placeholder="Поиск по заметкам…" />
+            </div>
+
+            <div class="notes-list" id="notesList" role="list"></div>
+
+            <div class="empty-state" id="notesEmpty" hidden>
+              <div class="empty-title">Заметок нет</div>
+              <div class="empty-sub">Создайте первую — всё сохраняется автоматически.</div>
+            </div>
+          </div>
+
+          <div class="card notes-editor">
+            <div class="notes-editor-head">
+              <div class="section-title" id="noteTitleHeading">Выберите заметку</div>
+              <div class="notes-editor-actions">
+                <button class="icon-btn" id="btnDeleteNote" title="Удалить заметку">
+                  <span class="icon" aria-hidden="true">🗑</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label">Заголовок</label>
+              <input id="noteTitleInput" placeholder="Например: Идеи проекта" disabled />
+            </div>
+
+            <div class="field">
+              <label class="label">Текст</label>
+              <textarea id="noteBodyInput" placeholder="Пишите здесь…" disabled></textarea>
+            </div>
+
+            <div class="notes-save-row">
+              <div class="small-muted" id="notesSaveStatus">—</div>
+              <button class="ghost-btn" id="btnExportNotesOnly" type="button">Экспорт заметок</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STATS -->
+      <section class="page" data-page="stats" hidden>
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Статистика</h1>
+            <div class="page-meta">
+              <span class="meta-item" id="statsRange">за 7 дней</span>
+            </div>
+          </div>
+          <div class="cal-actions">
+            <button class="ghost-btn" id="btnRecalcStats" type="button">Обновить</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title-row">
+              <div class="card-title">Задачи</div>
+              <div class="task-count" id="statsTaskCounts">—</div>
+            </div>
+
+            <div class="stat-cards">
+              <div class="stat-card">
+                <div class="stat-label">Процент выполнения</div>
+                <div class="stat-value" id="statsCompletionPct">0%</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Выполнено</div>
+                <div class="stat-value" id="statsCompletedTasks">0</div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="chart-card">
+              <div class="chart-title">Прогресс за неделю</div>
+              <div class="bars" id="statsWeekBars"></div>
+              <div class="timeline-hint">По доле выполненных задач в каждый день.</div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="chart-card">
+              <div class="chart-title">Продуктивность</div>
+              <div class="linechart" id="statsProductivityChart"></div>
+              <div class="timeline-hint">Суммарное количество выполненных задач по дням.</div>
+            </div>
+          </div>
+
+          <div class="col-right">
+            <div class="card card-pad">
+              <div class="section-head">
+                <div class="section-title">Привычки</div>
+                <div class="small-muted">реальные отметки</div>
+              </div>
+              <div class="stat-cards">
+                <div class="stat-card">
+                  <div class="stat-label">Выполнено привычек</div>
+                  <div class="stat-value" id="statsHabitsDone">0</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-label">Всего привычек</div>
+                  <div class="stat-value" id="statsHabitsTotal">0</div>
+                </div>
+              </div>
+
+              <div class="divider"></div>
+
+              <div class="chart-card">
+                <div class="chart-title">Лидеры по сериям</div>
+                <div class="bars" id="statsHabitLeaders"></div>
+              </div>
+            </div>
+
+            <div class="card card-pad">
+              <div class="section-head">
+                <div class="section-title">Данные</div>
+              </div>
+              <button class="danger-btn" id="btnDangerReset" type="button">Очистить все данные</button>
+              <div class="helper">
+                Экспортируйте резервную копию перед очисткой.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS / MODALS -->
+      <section class="page" data-page="settings" hidden>
+        <div class="card"><div class="card-title">—</div></div>
+      </section>
+    </main>
+
+    <!-- Bottom nav -->
+    <nav class="bottom-nav" aria-label="Навигация">
+      <a href="#today" class="nav-item active" data-nav="today">
+        <span class="nav-ico" aria-hidden="true">◷</span>
+        <span class="nav-text">Сегодня</span>
+      </a>
+      <a href="#calendar" class="nav-item" data-nav="calendar">
+        <span class="nav-ico" aria-hidden="true">▦</span>
+        <span class="nav-text">Календарь</span>
+      </a>
+      <a href="#habits" class="nav-item" data-nav="habits">
+        <span class="nav-ico" aria-hidden="true">◎</span>
+        <span class="nav-text">Привычки</span>
+      </a>
+      <a href="#notes" class="nav-item" data-nav="notes">
+        <span class="nav-ico" aria-hidden="true">✎</span>
+        <span class="nav-text">Заметки</span>
+      </a>
+      <a href="#stats" class="nav-item" data-nav="stats">
+        <span class="nav-ico" aria-hidden="true">▮</span>
+        <span class="nav-text">Статистика</span>
+      </a>
+    </nav>
+  </div>
+
+  <!-- Task modal -->
+  <div class="modal-backdrop" id="modalBackdrop" hidden></div>
+
+  <div class="modal" id="taskModal" role="dialog" aria-modal="true" aria-labelledby="taskModalTitle" hidden>
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="taskModalTitle">Задача</div>
+        <div class="small-muted" id="taskModalSub">Заполните детали</div>
+      </div>
+      <button class="icon-btn" id="taskModalClose" title="Закрыть">
+        <span class="icon" aria-hidden="true">✕</span>
+      </button>
+    </div>
+
+    <form id="taskForm" autocomplete="off">
+      <input type="hidden" id="taskId" />
+
+      <div class="field">
+        <label class="label">Название</label>
+        <input id="taskTitle" required maxlength="120" />
+      </div>
+
+      <div class="field">
+        <label class="label">Описание</label>
+        <textarea id="taskDesc" maxlength="600" rows="3" placeholder="Коротко: контекст, критерии готовности…"></textarea>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="field">
+          <label class="label">Дата</label>
+          <input type="date" id="taskDate" required />
+        </div>
+
+        <div class="field">
+          <label class="label">Категория</label>
+          <select id="taskCategory"></select>
+        </div>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="field">
+          <label class="label">Приоритет</label>
+          <select id="taskPriority">
+            <option value="high">Высокий</option>
+            <option value="medium">Средний</option>
+            <option value="low">Низкий</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label class="label">Статус</label>
+          <select id="taskStatus">
+            <option value="todo">К выполнению</option>
+            <option value="done">Выполнено</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="field">
+          <label class="label">Время начала</label>
+          <input type="time" id="taskStart" />
+        </div>
+        <div class="field">
+          <label class="label">Время окончания</label>
+          <input type="time" id="taskEnd" />
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="danger-btn" id="taskDeleteBtn" type="button">Удалить</button>
+        <div class="modal-actions-right">
+          <button class="ghost-btn" id="btnMoveTaskNextDay" type="button">На следующий день</button>
+          <button class="primary-btn" type="submit">Сохранить</button>
+        </div>
+      </div>
+
+      <div class="helper">
+        Если время не задано — задача не попадёт в таймлайн расписания.
+      </div>
+    </form>
+  </div>
+
+  <!-- Habit modal -->
+  <div class="modal" id="habitModal" role="dialog" aria-modal="true" aria-labelledby="habitModalTitle" hidden>
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="habitModalTitle">Привычка</div>
+        <div class="small-muted" id="habitModalSub">Создайте новую привычку</div>
+      </div>
+      <button class="icon-btn" id="habitModalClose" title="Закрыть">
+        <span class="icon" aria-hidden="true">✕</span>
+      </button>
+    </div>
+
+    <form id="habitForm" autocomplete="off">
+      <input type="hidden" id="habitId" />
+
+      <div class="field">
+        <label class="label">Название</label>
+        <input id="habitTitle" required maxlength="80" placeholder="Например: чтение" />
+      </div>
+
+      <div class="field">
+        <label class="label">Категория (опционально)</label>
+        <input id="habitCategory" maxlength="50" placeholder="Например: здоровье, обучение…" />
+      </div>
+
+      <div class="form-grid-2">
+        <div class="field">
+          <label class="label">Цель (раз в день)</label>
+          <select id="habitGoal">
+            <option value="1">1 раз</option>
+            <option value="2">2 раза</option>
+            <option value="3">3 раза</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="label">Цвет</label>
+          <select id="habitColor">
+            <option value="#7C3AED">фиолетовый</option>
+            <option value="#22C55E">зелёный</option>
+            <option value="#60A5FA">синий</option>
+            <option value="#F59E0B">оранжевый</option>
+            <option value="#F43F5E">розовый</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="danger-btn" id="habitDeleteBtn" type="button">Удалить</button>
+        <div class="modal-actions-right">
+          <button class="primary-btn" type="submit">Сохранить</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Import/Export modal -->
+  <div class="modal" id="ioModal" role="dialog" aria-modal="true" hidden>
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="ioModalTitle">Импорт / Экспорт</div>
+        <div class="small-muted" id="ioModalSub">Данные будут сохранены локально</div>
+      </div>
+      <button class="icon-btn" id="ioModalClose" title="Закрыть">
+        <span class="icon" aria-hidden="true">✕</span>
+      </button>
+    </div>
+
+    <div class="card card-pad" style="margin:0; background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); box-shadow:none;">
+      <div class="section-head">
+        <div class="section-title" id="ioModalMode">Экспорт</div>
+      </div>
+
+      <div class="field">
+        <label class="label">JSON</label>
+        <textarea id="ioText" rows="9" placeholder="Здесь будет JSON…"></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button class="ghost-btn" id="ioCopyBtn" type="button">Скопировать</button>
+        <div class="modal-actions-right">
+          <button class="primary-btn" id="ioApplyBtn" type="button">Применить</button>
+        </div>
+      </div>
+      <div class="helper" id="ioHelper">—</div>
+    </div>
+  </div>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>

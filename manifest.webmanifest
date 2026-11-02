@@ -1,0 +1,19 @@
+{
+    "name": "DAYFLOW",
+    "short_name": "DAYFLOW",
+    "description": "Персональный планировщик дня, привычки и прогресс — офлайн с PWA.",
+    "start_url": "./index.html",
+    "scope": "./",
+    "display": "standalone",
+    "background_color": "#0B0F17",
+    "theme_color": "#0B0F17",
+    "icons": [
+      {
+        "src": "./icon.svg",
+        "sizes": "any",
+        "type": "image/svg+xml",
+        "purpose": "any"
+      }
+    ]
+  }
+  
